@@ -10,6 +10,7 @@ Created on Wed Jan  8 10:45:57 2020
 
 import xarray as xr
 
+
 def _sum_(*args):
     """
     Utility function to sum up an arbitrary number of arguments.
@@ -61,7 +62,7 @@ def calculate_pm25_species_3bins(ds):
     :rtype: xarray DataSet.
     
     """
-       
+    
     # List of aerosol species contributing to PM25. According to WRF-Chem code 
     # in module_mosaic_sumpm.F subroutine sum_pm_mosaic_vbs0.
     
@@ -79,7 +80,6 @@ def calculate_pm25_species_3bins(ds):
                               )/conversion
       ds['pm25_'+ species].attrs['units']= 'ug m-3'
       
-    return ds
 
 
 def calculate_total_pm25(ds):
@@ -114,7 +114,6 @@ def calculate_total_pm25(ds):
     
     ds['pm25_calc'].attrs['units']= 'ug m-3'
     
-    return ds
 
 
 def calculate_pm25_components(ds):
@@ -138,26 +137,25 @@ def calculate_pm25_components(ds):
                           ds['pm25_smpa'], 
                           ds['pm25_glysoa_sfc']
                           )   
-    ds['pm25_SOA'].attrs['units']= 'ug m-3'
+    ds['pm25_SOA'].attrs['units'] = 'ug m-3'
     
     # Secondary Inorganic Aerosols SIA.
     ds['pm25_SIA'] = _sum_(ds['pm25_so4'],
                            ds['pm25_nh4'],
                            ds['pm25_no3']
                            )
-    ds['pm25_SIA'].attrs['units']= 'ug m-3'
+    ds['pm25_SIA'].attrs['units'] = 'ug m-3'
     
     #Primary Organic Aerosols
-    ds['pm25_POA'] = ['pm25_oc']
+    ds['pm25_POA'] = ds['pm25_oc']
     
     #Seasalt
     ds['pm25_seasalt'] = _sum_(ds['pm25_na'], ds['pm25_cl'])
-    ds['pm25_seasalt'].attrs['units']= 'ug m-3'
+    ds['pm25_seasalt'].attrs['units'] = 'ug m-3'
     
     #Dust
     ds['pm25_dust'] = ds['pm25_oin']
     
-    return ds
     
 
 def get_aerosols(ds):
@@ -181,7 +179,7 @@ def get_aerosols(ds):
         'bc_a01','bc_a02', 'bc_a03', 'bc_a04', # black carbon.
         'oc_a01','oc_a02', 'oc_a03', 'oc_a04', # organic carbon (POA).
         'smpa_a01','smpa_a02', 'smpa_a03', 'smpa_a04', # anthro SOA.
-        'smbb_a01','smbb_a02', 'smbb_a03', 'smbb_a04', # biomass burning SOA.
+        'smpbb_a01','smpbb_a02', 'smpbb_a03', 'smpbb_a04', # biomass burning SOA.
         'biog1_o_a01','biog1_o_a02', 'biog1_o_a03', 'biog1_o_a04', # biogenic SOA (isporene).
         'biog1_c_a01','biog1_c_a02', 'biog1_c_a03', 'biog1_c_a04', # biogenic SOA (pinenes).       
         'glysoa_sfc_a01','glysoa_sfc_a02', 'glysoa_sfc_a03', 'glysoa_sfc_a04',  # glyoxal SOA.      
@@ -190,13 +188,14 @@ def get_aerosols(ds):
         'cl_a01','cl_a02', 'cl_a03', 'cl_a04', # seasalt (cloride).
         'PM2_5_DRY', # dry pm2.5 (prognostic variable).
         'water_a01','water_a02', 'water_a03', 'water_a04', # wet pm2.5 component.
-        'num_a01','num_a02', 'num_a03', 'num_a04' # pm2.5 density number.
+        'num_a01','num_a02', 'num_a03', 'num_a04', # pm2.5 density number.
+        'ALT' #inverse density.
         ]
     
     ds_aer = _get_data_subset_(ds,aerosols)
-    ds_aer = calculate_pm25_species_3bins(ds_aer)
-    ds_aer = calculate_total_pm25(ds_aer)
-    ds_aer = calculate_pm25_components(ds_aer)
+    calculate_pm25_species_3bins(ds_aer)
+    calculate_total_pm25(ds_aer)
+    calculate_pm25_components(ds_aer)
     
     return ds_aer
     
