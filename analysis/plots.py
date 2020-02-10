@@ -9,9 +9,9 @@ Created on Thu Jan  9 10:57:07 2020
 """
 
 
-def map_2D(dataset, var_name, level=0 , mask_values=None,
+def map_2D(dataset, var_name, level=0, mask_values=None,
            title=None, cmap = 'OrRd', coastline=True, borders=True,
-           pixels=False, save=None, format='pdf', dpi=1000):
+           pixels=False, save=False, format='pdf', dpi=1000):
 
     """
     Plots a 2D-map of a variable at a given time (and level).
@@ -35,7 +35,7 @@ def map_2D(dataset, var_name, level=0 , mask_values=None,
     :param pixels: plot as pcolormesh (raw pixels). Default False.
     :type pixels: bool
     :param save: save plot to path destination, including figure name. Default False.
-    :type save: string
+    :type save: bool
     :param format: format of the saved plot (pdf, png, eps..), Default pdf.
     :type format: string
     :param dpi: resolution of the saved plot in dots per inches. Default 1000.
@@ -104,8 +104,57 @@ def map_2D(dataset, var_name, level=0 , mask_values=None,
     ax.set_title(title)
     
     #save
-    if save is not None:
+    if save:
         plt.savefig( save + '.' + format, format=format, dpi=dpi)
     
     plt.show()
+    
+    
+def time_series(dates, variables, labels,title=None, xlabel=None, ylabel=None):
+   
+    """
+    Plots timeseries of given varialbels in one single plot.
+ 
+    :param dates: timeseries dates.
+    :type dates: numpy.array
+    :param variables: variables to be plotted.
+    :type variables: list of xarray.DataArray
+    :param labels: labels for the each line plot.
+    :type labels: list of strings.
+    :param title: title of the plot. Default no title.
+    :type title: string
+    :param xlabel: x-axis label. Default no label.
+    :type  xlabel: string
+    :param xlabel: y-axis label. Default no label.
+    :type  xlabel: string
+    """
+    
+    import plotly.graph_objs as go
+    
+    data=[] #empty list for storing traces.
+    
+    # create trace for each variable
+    for i in range(len(variables)):
+            trace = go.Scatter(
+            x=dates, 
+            y=variables[i][1,:].values,
+            name= labels[i],
+            mode='lines',
+            )
+            data.append(trace)
+    
+    # set layout of the plot       
+    layout = go.Layout(
+    xaxis=dict(title= xlabel),
+    yaxis=dict(title= ylabel),
+    title=title,
+    showlegend = True)
+    
+    # plot
+    fig = go.Figure(data=data, layout=layout)
+    fig.show()
+    
+            
+            
+            
  
