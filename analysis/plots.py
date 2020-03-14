@@ -11,7 +11,7 @@ Created on Thu Jan  9 10:57:07 2020
 
 def map_2D(dataset, var_name, level=0, mask_values=None,
            title=None, cmap = 'OrRd', coastline=True, borders=True,
-           pixels=False, save=False, format='pdf', dpi=1000):
+           pixels=False, vmin = 0, vmax = 600, save=False, format='pdf', dpi=1000):
 
     """
     Plots a 2D-map of a variable at a given time (and level).
@@ -91,10 +91,10 @@ def map_2D(dataset, var_name, level=0, mask_values=None,
     #plot type: contourf or pcolormesh.
     if pixels:
         cs = plt.pcolormesh(long, lat,var_values,
-            transform=ccrs.PlateCarree(), cmap =cmap)
+            transform=ccrs.PlateCarree(), cmap =cmap, vmin=vmin, vmax=vmax)
     else:    
         cs = plt.contourf(long, lat, var_values,
-            transform=ccrs.PlateCarree(), cmap=cmap)
+            transform=ccrs.PlateCarree(), cmap=cmap,vmin=vmin, vmax=vmax)
     
     # colorbar.
     cbar = plt.colorbar(cs)
