@@ -10,11 +10,18 @@ Created on Mon Feb 3 15:34:57 2020
 
 from WRFChemToolkit.analysis import utils as utl
 
+ # List of aerosol species contributing to PM. According to WRF-Chem code 
+ # in module_mosaic_sumpm.F subroutine sum_pm_mosaic_vbs4.
 
-def calculate_pm25_species_3bins(ds):
+species = ['so4','nh4','no3','glysoa_r1','glysoa_r2','glysoa_oh','glysoa_sfc',
+            'glysoa_nh4','oc', 'bc', 'oin','na','cl','asoaX','asoa1','asoa2',
+            'asoa3', 'asoa4', 'bsoaX','bsoa1','bsoa2', 'bsoa3', 'bsoa4' ]
+
+
+def get_pm_species(ds, species):
     
     """
-    Add to datset each aerosol species contribution to pm2.5 in ug m-3.
+    Add to datset each aerosol species contribution to pm2.5 and pm10 in ug m-3.
 
     :param ds: WRF-chem output.
     :type ds: xarray DataSet.
@@ -22,34 +29,40 @@ def calculate_pm25_species_3bins(ds):
     :rtype: xarray DataSet.
     
     """
-    
-    # List of aerosol species contributing to PM25. According to WRF-Chem code 
-    # in module_mosaic_sumpm.F subroutine sum_pm_mosaic_vbs4.
-    
-    species = ['so4','nh4','no3','glysoa_r1','glysoa_r2','glysoa_oh','glysoa_sfc',
-               'glysoa_nh4','oc', 'bc', 'oin','na','cl','asoaX','asoa1','asoa2',
-               'asoa3', 'asoa4', 'bsoaX','bsoa1','bsoa2', 'bsoa3', 'bsoa4' ]
     
     conversion = ds['ALT'] # inverse densitiy.
     
-    # Calculating contributions: summing up the first 3 bins 
+    # Calculating contributions for PM2.5: summing up the first 3 bins 
     # (diameter < 2.5 um) for each species.
+    
     for species in species:
-      ds['pm25_'+ species] = utl._sum_(
+        
+     #convert species to ug/m3.
+     ds[species + '_a01']/conversion
+     ds[species + '_a02']/conversion
+     ds[species + '_a03']/conversion
+     ds[species + '_a04']/conversion
+    
+    # add PM2.5 components.
+     ds['pm25_'+ species] = utl._sum_(
                               ds[species + '_a01'], 
                               ds[species + '_a02'],
                               ds[species + '_a03']
-                              )/conversion
-      ds['pm25_'+ species].attrs['units']= 'ug m-3'
-      
-      
-def calculate_pm25_components(ds):
+                              )
+     ds['pm25_'+ species].attrs['units']= 'ug m-3'
+     
+     # add PM10 components (PM2.5 + bin04).
+     ds['pm10_'+ species] = ds['pm25_'+ species] + ds[species + '_a04']
+        
+
+        
+        
+def get_pm_components(ds):
     
     """
-    Calcualtes and add to dataset SIA, SOA, POA, dust, seasalt contributions 
-    to PM2.5. 
-    Need to call function calculate_pm25_species_3bins before use.
-   (NB: BC contribution is already calculated in calculate_pm25_species_3bins).
+    Once calculated PM species, this function calcualtes and add to dataset 
+    SIA, SOA, POA, dust, seasalt contributions to PM2.5 and PM10. 
+    (NB: BC contribution is already calculated in get_pm_species).
 
     :param ds: WRF-chem output.
     :type ds: xarray DataSet.
@@ -57,6 +70,8 @@ def calculate_pm25_components(ds):
     :rtype: xarray DataSet.
     
     """
+        
+    #PM2.5
     
     # Secondary Organic Aerosols SOA.
     ds['pm25_SOA'] =utl._sum_(ds['pm25_glysoa_r1'],
@@ -84,58 +99,110 @@ def calculate_pm25_components(ds):
                               )
     ds['pm25_SIA'].attrs['units'] = 'ug m-3'
         
-    #Primary Organic Aerosols
+    #Primary Organic Aerosols.
     ds['pm25_POA'] = ds['pm25_oc']
         
-    #Seasalt
-    ds['pm25_seasalt'] = utl._sum_(ds['pm25_na'], ds['pm25_cl'])
-    ds['pm25_seasalt'].attrs['units'] = 'ug m-3'
+    #Seasalt.
+    ds['pm25_sea'] = utl._sum_(ds['pm25_na'], ds['pm25_cl'])
+    ds['pm25_sea'].attrs['units'] = 'ug m-3'
         
     #Dust
     ds['pm25_dust'] = ds['pm25_oin']
     
+    
+    #for PM10
+    
+    ds['pm10_SOA'] =utl._sum_(ds['pm10_glysoa_r1'],
+                          ds['pm10_glysoa_r2'], 
+                          ds['pm10_glysoa_oh'],
+                          ds['pm10_glysoa_nh4'], 
+                          ds['pm10_glysoa_sfc'],
+                          ds['pm10_asoaX'],
+                          ds['pm10_asoa1'],
+                          ds['pm10_asoa2'],
+                          ds['pm10_asoa3'],
+                          ds['pm10_asoa4'],
+                          ds['pm10_bsoaX'],
+                          ds['pm10_bsoa1'],
+                          ds['pm10_bsoa2'],
+                          ds['pm10_bsoa3'],
+                          ds['pm10_bsoa4']
+                          )   
+    ds['pm10_SOA'].attrs['units'] = 'ug m-3'
+    
+    # Secondary Inorganic Aerosols SIA.
+    ds['pm10_SIA'] = utl._sum_(ds['pm10_so4'],
+                               ds['pm10_nh4'],
+                               ds['pm10_no3']
+                              )
+    ds['pm10_SIA'].attrs['units'] = 'ug m-3'
+        
+    #Primary Organic Aerosols.
+    ds['pm10_POA'] = ds['pm10_oc']
+        
+    #Seasalt.
+    ds['pm10_sea'] = utl._sum_(ds['pm10_na'], ds['pm10_cl'])
+    ds['pm10_sea'].attrs['units'] = 'ug m-3'
+        
+    #Dust
+    ds['pm10_dust'] = ds['pm10_oin']
 
-def calculate_total_pm25(ds):
+    
+    
+        
+def calculate_tot_pm(ds):
     """
-    Add to dataset the calculated pm2.5 in ug m-3. Should be equal to the 
-    WRF-Chem variable PM2_5_DRY. Calcualation for sum follows the calculation 
-    in WRF-Chem module_mosaic_sumpm.F subroutine sum_pm_mosaic_vbs4.
-    Need to call function calculate_pm25_species_3bins and 
-    calculate_pm25_components before use.
-
+    Add to dataset the calculated pm2.5 and PM10 in ug m-3 from components SIA POA SOA bc dust and seasalt. 
+    Total should be equal to the WRF-Chem variable PM2_5_DRY and PM10. Calculation for sum follows 
+    the calculation in WRF-Chem module_mosaic_sumpm.F subroutine sum_pm_mosaic_vbs4.
+   
     :param ds: WRF-chem output.
     :type ds: xarray DataSet.
-    :return: Dataset with added tot pm2.5 component.
+    :return: Dataset with added tot pm component.
     :rtype: xarray DataSet.
     
     """
-
-    ds['pm25_calc'] =utl._sum_(
+    
+    # PM2.5.
+    ds['pm25_tot'] =utl._sum_(
                            ds['pm25_SOA'],
                            ds['pm25_SIA'],  
                            ds['pm25_dust'], 
-                           ds['pm25_seasalt'],                 
+                           ds['pm25_sea'],                 
                            ds['pm25_POA'], # POA (organic carbon).
                            ds['pm25_bc']  
                            )
     
-    ds['pm25_calc'].attrs['units']= 'ug m-3'
+    ds['pm25_tot'].attrs['units']= 'ug m-3'
+    
+    # PM10.
+    ds['pm10_tot'] =utl._sum_(
+                           ds['pm10_SOA'],
+                           ds['pm10_SIA'],  
+                           ds['pm10_dust'], 
+                           ds['pm10_sea'],                 
+                           ds['pm10_POA'], # POA (organic carbon).
+                           ds['pm10_bc']  
+                           )
+    
+    ds['pm10_tot'].attrs['units']= 'ug m-3'
    
 
-def get_aerosols(ds):
+    
+def get_aerosols(ds,species):
     
     """
-    This function creates a dataset with all the pm2.5 useful data from 
+    This function creates a dataset with all the pm2.5 and pm10 useful data from 
     the WRF-Chem output.
     
     :param ds: WRF-chem output.
     :type ds: xarray DataSet.
-    :return: Reduced dataset with pm25 data.
+    :return: Reduced dataset with pm data.
     :rtype: xarray DataSet.
     
     """
     
-    #list of relevant aerosols variables for pm2.5 and pm10.
+    #list of relevant aerosols variables for pm2.5 and pm10 in option 202.
     aerosols = [
         'so4_a01','so4_a02', 'so4_a03', 'so4_a04', # sulfate.
         'no3_a01','no3_a02', 'no3_a03', 'no3_a04', # nitrate.
@@ -166,15 +233,1052 @@ def get_aerosols(ds):
         ]
     
     ds_aer = utl._get_data_subset_(ds,aerosols)
-    calculate_pm25_species_3bins(ds_aer)
-    calculate_pm25_components(ds_aer)
-    calculate_total_pm25(ds_aer)
-   
     
+    get_pm_species(ds_aer, species)
+    get_pm_components(ds_aer)
+    calculate_tot_pm(ds_aer)
     return ds_aer
+
+
+   def get_vbs(ds):
+   import numpy as np
+    """
+    Get matrix with SOA volatilities from VBS scheme in opt 202. Matrix size:5 x4 (m_volatilities x n_bins).
     
-
     
-
-
- 
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
