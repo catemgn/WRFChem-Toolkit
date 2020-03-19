@@ -18,11 +18,10 @@ def get_IGP(data_path, shp_path):
      Return type is a dictionary containing WRF-Chem outputs datasets with keys:
      
      - IGP :contains all IGP states in BGD, PAK, IND.
-     - U_IGP : data for states Punjab (PAK), Punjab (IND), Haryana, 
-       Delhi NCT (IND).
-     - M_IGP : data for states Uttar Pradesh (IND), Bihar (IND) 
-     - L_IGP : data for states West Bengal (IND), B (IND), Barisal (BGD), 
-       Dhaka (BGD), Khulna (BGD),Rajshahi (BGD), Rangpur (IGP).
+     - U_IGP : data for states Sindh, Punjab (PAK), Punjab (IND).
+     - M_IGP : data for states Haryana, Delhi NCT, Uttar Pradesh (IND).
+     - L_IGP : data for states Bihar, West Bengal (IND), Barisal, 
+       Dhaka, Khulna, Rajshahi, Rangpur (BGD).
      - Single states subsets (TO DO)."
     
     WARNING: this division of IGP is arbitrary, given that there is no 
@@ -49,20 +48,24 @@ def get_IGP(data_path, shp_path):
     
     # get IGP states shapefiles.
     shdf= salem.read_shapefile(shp_path) # IGP shp.
-    shdf_UIGP = shdf.loc[\
-                      (shdf['HASC_1'] == 'IN.HR')\
-                    | (shdf['HASC_1'] == 'IN.DL')\
-                    | (shdf['HASC_1'] == 'IN.PB')\
-                    | (shdf['HASC_1'] == 'PK.PB')\
+    shdf_UIGP = shdf.loc[
+                      (shdf['HASC_1'] == 'PK.SD')
+                    | (shdf['HASC_1'] == 'IN.PB')
+                    | (shdf['HASC_1'] == 'PK.PB')
                     ]
-    shdf_MIGP = shdf.loc[\
-                      (shdf['HASC_1'] == 'IN.UP')\
-                    | (shdf['HASC_1'] == 'IN.BR')\
+    shdf_MIGP = shdf.loc[
+                      (shdf['HASC_1'] == 'IN.DL')
+                    |  (shdf['HASC_1'] == 'IN.HR')
+                    | (shdf['HASC_1'] == 'IN.UP')
                     ]
     shdf_LIGP = shdf.loc[\
-                      (shdf['HASC_1'] == 'IN.WB')\
-                    | (shdf['HASC_1'] == 'IN.BR')\
-                    | (shdf['GID_0'] == 'BGD')\
+                      (shdf['HASC_1'] == 'IN.WB')
+                    | (shdf['HASC_1'] == 'IN.BR')
+                    | (shdf['HASC_1'] == 'BGD.BA')
+                    | (shdf['HASC_1'] == 'BGD.DH')
+                    | (shdf['HASC_1'] == 'BGD.KH')
+                    | (shdf['HASC_1'] == 'BGD.RS')
+                    | (shdf['HASC_1'] == 'BGD.RP')
                     ]
     
     # Get data subsets.
