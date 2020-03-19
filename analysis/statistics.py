@@ -8,6 +8,9 @@ Created on Thu Jan  9 10:57:07 2020
 @author: Caterina Mogno c.mogno@ed.ac.uk
 """
 
+import xarray as xr
+
+
 def merge_ds(data_path):
  """
   Merge in a single dataset all data linked in the path. To consider multiple
@@ -35,8 +38,8 @@ def time_mean(ds):
     Time averaged ds.
   :rtype: xarray DataSet.
  """
- return xr.Dataset(dict(da.mean(dim='Time', keep_attrs=True).data_vars),
-                    coords=dict(da.coords))
+ return xr.Dataset(dict(ds.mean(dim='Time', keep_attrs=True).data_vars),
+                    coords=dict(ds.coords))
 
 
 def space_mean(ds):
@@ -54,7 +57,7 @@ def space_mean(ds):
                      keep_attrs=True).data_vars), coords=dict(ds.coords))
 
 
-def space_subset(dataset, lat_lim, long_lim ):
+def space_subset(ds, lat_lim, long_lim ):
     """
     Extract spatial subset of a dataset given lat and long limits.
 

@@ -137,7 +137,7 @@ def time_series(dates, variables, labels,title=None, xlabel=None, ylabel=None):
     for i in range(len(variables)):
             trace = go.Scatter(
             x=dates, 
-            y=variables[i][1,:].values,
+            y=variables[i][:,0].values,
             name= labels[i],
             mode='lines',
             )
