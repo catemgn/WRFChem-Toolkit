@@ -9,6 +9,8 @@ Created on Thu Jan  9 10:57:07 2020
 """
 import numpy as np
 import xarray as xr
+import sys
+sys.path.append('/exports/csce/datastore/geos/users/s1878599/python_code/')
 from WRFChemToolkit.analysis import aerosols_201 as ar201
 
 # Load test data.

@@ -10,15 +10,7 @@ Created on Mon Feb 3 15:34:57 2020
 
 from WRFChemToolkit.analysis import utils as utl
 
- # List of aerosol species contributing to PM. According to WRF-Chem code 
- # in module_mosaic_sumpm.F subroutine sum_pm_mosaic_vbs4.
-
-species = ['so4','nh4','no3','glysoa_r1','glysoa_r2','glysoa_oh','glysoa_sfc',
-            'glysoa_nh4','oc', 'bc', 'oin','na','cl','asoaX','asoa1','asoa2',
-            'asoa3', 'asoa4', 'bsoaX','bsoa1','bsoa2', 'bsoa3', 'bsoa4' ]
-
-
-def get_pm_species(ds, species):
+def get_pm_species(ds):
     
     """
     Add to datset each aerosol species contribution to pm2.5 and pm10 in ug m-3.
@@ -29,8 +21,15 @@ def get_pm_species(ds, species):
     :rtype: xarray DataSet.
     
     """
+     # List of aerosol species contributing to PM. According to WRF-Chem code 
+     # in module_mosaic_sumpm.F subroutine sum_pm_mosaic_vbs4.
     
-    conversion = ds['ALT'] # inverse densitiy.
+    species = ['so4','nh4','no3','glysoa_r1','glysoa_r2','glysoa_oh','glysoa_sfc',
+            'glysoa_nh4','oc', 'bc', 'oin','na','cl','asoaX','asoa1','asoa2',
+            'asoa3', 'asoa4', 'bsoaX','bsoa1','bsoa2', 'bsoa3', 'bsoa4' ]
+    
+    
+    conv = ds.ALT # inverse densitiy.
     
     # Calculating contributions for PM2.5: summing up the first 3 bins 
     # (diameter < 2.5 um) for each species.
@@ -38,21 +37,17 @@ def get_pm_species(ds, species):
     for species in species:
         
      #convert species to ug/m3.
-     ds[species + '_a01']/conversion
-     ds[species + '_a02']/conversion
-     ds[species + '_a03']/conversion
-     ds[species + '_a04']/conversion
     
     # add PM2.5 components.
-     ds['pm25_'+ species] = utl._sum_(
+     ds['pm25_'+ species] = (utl._sum_(
                               ds[species + '_a01'], 
                               ds[species + '_a02'],
                               ds[species + '_a03']
-                              )
+                              ))/conv
      ds['pm25_'+ species].attrs['units']= 'ug m-3'
      
      # add PM10 components (PM2.5 + bin04).
-     ds['pm10_'+ species] = ds['pm25_'+ species] + ds[species + '_a04']
+     ds['pm10_'+ species] =( ds['pm25_'+ species] + (ds[species + '_a04']/ds.ALT))
         
 
         
@@ -187,9 +182,44 @@ def calculate_tot_pm(ds):
     
     ds['pm10_tot'].attrs['units']= 'ug m-3'
    
-
+def direct_pm25(ds):
+    """
+    Add to dataset the calculated pm2.5 direclty fromWRFchem outputs variables.
+    Calculation for sum follows the calculation in WRF-Chem 
+    module_mosaic_sumpm.F subroutine sum_pm_mosaic_vbs4.
+   
+    :param ds: WRF-chem output.
+    :type ds: xarray DataSet.
+    :return: Dataset with added tot pm25.
+    :rtype: xarray DataSet.
     
-def get_aerosols(ds,species):
+    """
+    
+    ds["pm25_dir_tot"]= ((ds.so4_a01 +ds.so4_a02 + ds.so4_a03)/ds.ALT +
+                    (ds.nh4_a01 +ds.nh4_a02 + ds.nh4_a03)/ds.ALT +
+                     (ds.no3_a01 +ds.no3_a02 + ds.no3_a03)/ds.ALT +
+                     (ds.bc_a01 + ds.bc_a02 + ds.bc_a03)/ds.ALT +
+                     (ds.oc_a01 + ds.oc_a02 + ds.oc_a03)/ds.ALT +
+                     (ds.glysoa_r1_a01 +ds.glysoa_r1_a02+ ds.glysoa_r1_a03)/ds.ALT +
+                     (ds.glysoa_r2_a01 +ds.glysoa_r2_a02+ ds.glysoa_r2_a03)/ds.ALT +
+                     (ds.glysoa_oh_a01 +ds.glysoa_oh_a02+ ds.glysoa_oh_a03)/ds.ALT +
+                     (ds.glysoa_sfc_a01 +ds.glysoa_sfc_a02+ ds.glysoa_sfc_a03)/ds.ALT +
+                     (ds.glysoa_nh4_a01 +ds.glysoa_nh4_a02+ ds.glysoa_nh4_a03)/ds.ALT +
+                     (ds.oin_a01 + ds.oin_a02 +ds.oin_a03)/ds.ALT +
+                     (ds.na_a01 +ds.na_a02 +ds.na_a03)/ds.ALT +
+                     (ds.cl_a01 +ds.cl_a02 +ds.cl_a03)/ds.ALT +
+                     (ds.asoaX_a01 +ds.asoaX_a02 +ds.asoaX_a03)/ds.ALT +
+                     (ds.asoa1_a01 +ds.asoa1_a02 +ds.asoa1_a03)/ds.ALT +
+                     (ds.asoa2_a01 +ds.asoa2_a02 +ds.asoa2_a03)/ds.ALT +
+                     (ds.asoa3_a01 +ds.asoa3_a02 +ds.asoa3_a03)/ds.ALT +
+                     (ds.asoa4_a01 +ds.asoa4_a02 +ds.asoa4_a03)/ds.ALT +
+                     (ds.bsoaX_a01 +ds.bsoaX_a02 +ds.bsoaX_a03)/ds.ALT +
+                     (ds.bsoa1_a01 +ds.bsoa1_a02 +ds.bsoa1_a03)/ds.ALT +
+                     (ds.bsoa2_a01 +ds.bsoa2_a02 +ds.bsoa2_a03)/ds.ALT +
+                     (ds.bsoa3_a01 +ds.bsoa3_a02 +ds.bsoa3_a03)/ds.ALT +
+                     (ds.bsoa4_a01 +ds.bsoa4_a02 +ds.bsoa4_a03)/ds.ALT)
+    
+def get_aerosols(ds):
     
     """
     This function creates a dataset with all the pm2.5 and pm10 useful data from 
@@ -234,7 +264,14 @@ def get_aerosols(ds,species):
     
     ds_aer = utl._get_data_subset_(ds,aerosols)
     
-    get_pm_species(ds_aer, species)
+    get_pm_species(ds_aer)
     get_pm_components(ds_aer)
     calculate_tot_pm(ds_aer)
     return ds_aer   
+
+
+
+                     
+                     
+                     
+                     
