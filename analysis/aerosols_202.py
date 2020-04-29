@@ -34,20 +34,20 @@ def get_pm_species(ds):
     # Calculating contributions for PM2.5: summing up the first 3 bins 
     # (diameter < 2.5 um) for each species.
     
-    for species in species:
+    for sp in species:
         
      #convert species to ug/m3.
     
     # add PM2.5 components.
-     ds['pm25_'+ species] = (utl._sum_(
-                              ds[species + '_a01'], 
-                              ds[species + '_a02'],
-                              ds[species + '_a03']
+     ds['pm25_'+ sp] = (utl._sum_(
+                              ds[sp + '_a01'], 
+                              ds[sp + '_a02'],
+                              ds[sp + '_a03']
                               ))/conv
-     ds['pm25_'+ species].attrs['units']= 'ug m-3'
+     ds['pm25_'+ sp].attrs['units']= 'ug m-3'
      
      # add PM10 components (PM2.5 + bin04).
-     ds['pm10_'+ species] =( ds['pm25_'+ species] + (ds[species + '_a04']/ds.ALT))
+     ds['pm10_'+ sp] =( ds['pm25_'+ sp] + (ds[sp + '_a04']/ds.ALT))
         
 
         
@@ -218,7 +218,27 @@ def direct_pm25(ds):
                      (ds.bsoa2_a01 +ds.bsoa2_a02 +ds.bsoa2_a03)/ds.ALT +
                      (ds.bsoa3_a01 +ds.bsoa3_a02 +ds.bsoa3_a03)/ds.ALT +
                      (ds.bsoa4_a01 +ds.bsoa4_a02 +ds.bsoa4_a03)/ds.ALT)
+
+
+
+def convert_cv(ds,cvap):
+    """
+    This function converts condesable apour varaibles from ppm to ug/m3. 
+    :param ds: WRF-chem output.
+    :type ds: xarray DataSet.
+    :param cv: list of condesable vapour varaibles.
+    :type cv: list.
+    :return: Reduced dataset with pm data.
+    :rtype: xarray DataSet.
     
+    """
+    for cv in cvap:
+        #convert species from ppm to ug/m3.
+         ds[cv] = (ds[cv]*1e3)/ds.ALT
+         ds[cv].attrs['units']= 'ug m-3'
+      
+        
+
 def get_aerosols(ds):
     
     """
@@ -262,11 +282,23 @@ def get_aerosols(ds):
         'ALT' #inverse density.
         ]
     
+    #list of condensable vapours for VBS.
+    cond_vap=[
+        'cvasoaX','cvasoa1','cvasoa2','cvasoa3','cvasoa4',
+        'cvbsoaX','cvbsoa1','cvbsoa2','cvbsoa3','cvbsoa4',
+        'ALT']  
     ds_aer = utl._get_data_subset_(ds,aerosols)
     
     get_pm_species(ds_aer)
     get_pm_components(ds_aer)
     calculate_tot_pm(ds_aer)
+    
+    # add condensable vapors
+    ds_cv =  utl._get_data_subset_(ds,cond_vap)
+    convert_cv(ds_cv,cond_vap)
+    
+    ds_aer = ds_aer.merge(ds_cv,compat='override')
+    
     return ds_aer   
 
 
