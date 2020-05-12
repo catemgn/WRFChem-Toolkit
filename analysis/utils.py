@@ -49,4 +49,28 @@ def _get_data_subset_(ds, var_list):
         subset[var] = ds[var]
         
     return subset
+
+def get_tot_pressure(ds):
+     """
+     Add the total pressure [Pa] from base pressure and perturbation pressure.
+     """
+     ds["TP"]= ds.PB+ds.P
+     ds["TP"].attrs["units"]="Pa"
+    
+
+def get_abs_temperature(ds):
+    """
+    Add the absolute temperature [k] via Poisson's eq.
+    
+    """
+     
+    ds["theta"] = ds.T + 300 #potenital temperature
+    ds["theta"].attrs["units"]="K"
+     
+    ds["AT"]=(ds.theta*((ds.PB+ds.P)/1000))**(2/7) # Poisson's eq.
+    ds["AT"].attrs["units"]="K"
+     
+     
+     
+    
      

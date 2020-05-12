@@ -27,24 +27,27 @@ def merge_ds(data_path):
  return dataset
 
 
-def time_mean(ds):
+def time_mean(ds, time_nm):
  """
   Make the average over 'Time' dimension of a dataset.
 
   :param ds:
     dataset to be averaged.
   :type ds: xarray DataSet.
+  :param time_nm:
+      name of the time time dimension.
+  :type time_nm: string.
   :return:
     Time averaged ds.
   :rtype: xarray DataSet.
  """
- return xr.Dataset(dict(ds.mean(dim='Time', keep_attrs=True).data_vars),
-                    coords=dict(ds.coords))
+ return xr.Dataset(dict(ds.mean(dim=time_nm, keep_attrs=True, 
+                   skipna=True).data_vars), coords=dict(ds.coords))
 
 
 def space_mean(ds):
  """
-  Make the average over 'xlat and xlong' dimension of a DataSet.
+  Make the average over latitute and longitude dimension of a DataSet.
 
   :param ds:
     dataset to be averaged.
@@ -54,7 +57,8 @@ def space_mean(ds):
   :rtype: xarray DataSet.
  """
  return xr.Dataset(dict(ds.mean(dim= ['south_north','west_east'],
-                     keep_attrs=True).data_vars), coords=dict(ds.coords))
+                     keep_attrs=True, skipna=True).data_vars), 
+                     coords=dict(ds.coords))
 
 
 def space_subset(ds, lat_lim, long_lim ):

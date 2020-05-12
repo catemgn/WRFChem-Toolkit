@@ -58,14 +58,14 @@ def get_IGP(data_path, shp_path):
                     |  (shdf['HASC_1'] == 'IN.HR')
                     | (shdf['HASC_1'] == 'IN.UP')
                     ]
-    shdf_LIGP = shdf.loc[\
+    shdf_LIGP = shdf.loc[
                       (shdf['HASC_1'] == 'IN.WB')
                     | (shdf['HASC_1'] == 'IN.BR')
-                    | (shdf['HASC_1'] == 'BGD.BA')
-                    | (shdf['HASC_1'] == 'BGD.DH')
-                    | (shdf['HASC_1'] == 'BGD.KH')
-                    | (shdf['HASC_1'] == 'BGD.RS')
-                    | (shdf['HASC_1'] == 'BGD.RP')
+                    | (shdf['HASC_1'] == 'BD.BA')
+                    | (shdf['HASC_1'] == 'BD.KH')
+                    | (shdf['HASC_1'] == 'BD.RS')
+                    | (shdf['HASC_1'] == 'BD.RP')
+                    |  (shdf['HASC_1'] == 'BD.DH')
                     ]
     
     # Get data subsets.
