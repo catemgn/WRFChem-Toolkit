@@ -26,7 +26,7 @@ def get_pm_species(ds):
     
     species = ['so4','nh4','no3','glysoa_r1','glysoa_r2','glysoa_oh','glysoa_sfc',
             'glysoa_nh4','oc', 'bc', 'oin','na','cl','asoaX','asoa1','asoa2',
-            'asoa3', 'asoa4', 'bsoaX','bsoa1','bsoa2', 'bsoa3', 'bsoa4' ]
+            'asoa3', 'asoa4', 'bsoaX','bsoa1','bsoa2', 'bsoa3', 'bsoa4','water']
     
     
     conv = ds.ALT # inverse densitiy.
@@ -87,6 +87,28 @@ def get_pm_components(ds):
                           )   
     ds['pm25_SOA'].attrs['units'] = 'ug m-3'
     
+    ds['pm25_glySOA'] =utl._sum_(ds['pm25_glysoa_r1'],
+                          ds['pm25_glysoa_r2'], 
+                          ds['pm25_glysoa_oh'],
+                          ds['pm25_glysoa_nh4'], 
+                          ds['pm25_glysoa_sfc'])
+    ds['pm25_glySOA'].attrs['units'] ='ug m-3'
+     
+    ds['pm25_aSOA'] =utl._sum_(ds['pm25_asoaX'],
+                          ds['pm25_asoa1'],
+                          ds['pm25_asoa2'],
+                          ds['pm25_asoa3'],
+                          ds['pm25_asoa4'])
+    ds['pm25_aSOA'].attrs['units'] ='ug m-3'
+     
+    ds['pm25_bSOA'] =utl._sum_(ds['pm25_bsoaX'],
+                          ds['pm25_bsoa1'],
+                          ds['pm25_bsoa2'],
+                          ds['pm25_bsoa3'],
+                          ds['pm25_bsoa4'])
+    ds['pm25_bSOA'].attrs['units'] ='ug m-3'
+    
+    
     # Secondary Inorganic Aerosols SIA.
     ds['pm25_SIA'] = utl._sum_(ds['pm25_so4'],
                                ds['pm25_nh4'],
@@ -96,6 +118,11 @@ def get_pm_components(ds):
         
     #Primary Organic Aerosols.
     ds['pm25_POA'] = ds['pm25_oc']
+    
+    #Tot OA.
+    ds['pm25_OA'] = ds['pm25_POA'] + ds['pm25_SOA']
+    ds['pm25_OA'].attrs['units'] = 'ug m-3'
+    
         
     #Seasalt.
     ds['pm25_sea'] = utl._sum_(ds['pm25_na'], ds['pm25_cl'])
@@ -125,6 +152,29 @@ def get_pm_components(ds):
                           )   
     ds['pm10_SOA'].attrs['units'] = 'ug m-3'
     
+    ds['pm10_glySOA'] =utl._sum_(ds['pm10_glysoa_r1'],
+                          ds['pm10_glysoa_r2'], 
+                          ds['pm10_glysoa_oh'],
+                          ds['pm10_glysoa_nh4'], 
+                          ds['pm10_glysoa_sfc'])
+    ds['pm10_glySOA'].attrs['units'] ='ug m-3'
+     
+    ds['pm10_aSOA'] =utl._sum_(ds['pm10_asoaX'],
+                          ds['pm10_asoa1'],
+                          ds['pm10_asoa2'],
+                          ds['pm10_asoa3'],
+                          ds['pm10_asoa4'])
+    ds['pm10_aSOA'].attrs['units'] ='ug m-3'
+     
+    ds['pm10_bSOA'] =utl._sum_(ds['pm10_bsoaX'],
+                          ds['pm10_bsoa1'],
+                          ds['pm10_bsoa2'],
+                          ds['pm10_bsoa3'],
+                          ds['pm10_bsoa4'])
+    
+    ds['pm10_bSOA'].attrs['units'] ='ug m-3'
+    
+    
     # Secondary Inorganic Aerosols SIA.
     ds['pm10_SIA'] = utl._sum_(ds['pm10_so4'],
                                ds['pm10_nh4'],
@@ -134,6 +184,10 @@ def get_pm_components(ds):
         
     #Primary Organic Aerosols.
     ds['pm10_POA'] = ds['pm10_oc']
+    
+     #Tot OA.
+    ds['pm10_OA'] = ds['pm10_POA'] + ds['pm10_SOA']
+    ds['pm10_OA'].attrs['units'] = 'ug m-3'
         
     #Seasalt.
     ds['pm10_sea'] = utl._sum_(ds['pm10_na'], ds['pm10_cl'])
@@ -223,7 +277,7 @@ def direct_pm25(ds):
 
 def convert_cv(ds,cvap):
     """
-    This function converts condesable apour varaibles from ppm to ug/m3. 
+    This function converts condesable apour varaibles from ppmv to ug/m3. 
     :param ds: WRF-chem output.
     :type ds: xarray DataSet.
     :param cv: list of condesable vapour varaibles.
@@ -232,9 +286,20 @@ def convert_cv(ds,cvap):
     :rtype: xarray DataSet.
     
     """
+    # Using cv_mw =250 g/mol for cond vap as in Knote et al 2015 +
+    #  ideal gas law in the form: PV=nRT
+    
+    cv_mw=250   # g/mol
+    r= 8.3145   # J mol-1 K-1
+    gug=1e6  # grams to ug conversion.
+    
+    utl.get_tot_pressure(ds)    # Get T and P
+    utl.get_abs_temperature(ds)
+    
     for cv in cvap:
-        #convert species from ppm to ug/m3.
-         ds[cv] = (ds[cv]*1e3)/ds.ALT
+        #convert species from ppmv to ug/m3. Note:divide value in ppmv by 1e6.
+         #ds[cv] = (ds[cv]/1e6)*(cv_mw*gug)*(ds.TP/(ds.AT*r))
+         ds[cv] = (ds[cv]/1e6)*cv_mw/29* 1e9/ds.ALT
          ds[cv].attrs['units']= 'ug m-3'
       
         
@@ -279,6 +344,7 @@ def get_aerosols(ds):
         'cl_a01','cl_a02', 'cl_a03', 'cl_a04', # seasalt (cloride).
         'PM2_5_DRY', # dry pm2.5 (prognostic variable).
         'num_a01','num_a02', 'num_a03', 'num_a04', # pm2.5 density number.
+        'water_a01','water_a02', 'water_a03', 'water_a04', # pm2.5 water.
         'ALT' #inverse density.
         ]
     
@@ -286,7 +352,10 @@ def get_aerosols(ds):
     cond_vap=[
         'cvasoaX','cvasoa1','cvasoa2','cvasoa3','cvasoa4',
         'cvbsoaX','cvbsoa1','cvbsoa2','cvbsoa3','cvbsoa4',
-        'ALT']  
+        ]  
+    
+    state_var =["ALT", "P","PB","T"]
+    
     ds_aer = utl._get_data_subset_(ds,aerosols)
     
     get_pm_species(ds_aer)
@@ -294,7 +363,7 @@ def get_aerosols(ds):
     calculate_tot_pm(ds_aer)
     
     # add condensable vapors
-    ds_cv =  utl._get_data_subset_(ds,cond_vap)
+    ds_cv =  utl._get_data_subset_(ds,cond_vap + state_var)
     convert_cv(ds_cv,cond_vap)
     
     ds_aer = ds_aer.merge(ds_cv,compat='override')
